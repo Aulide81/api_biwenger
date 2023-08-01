@@ -1,3 +1,4 @@
+
 import requests
 import pickle
 import json
@@ -81,13 +82,23 @@ class biwenger:
             for pos,mov in enumerate(movs):
               
               amount=mov['amount']
+              
+              # Siempre hay comprador
               comprador=mov['to']['name']
               
               if  date in self.balance[comprador].keys():
                 self.balance[comprador][date]=-amount
               else:
                 self.balance[comprador][date+pos+1]=-amount
+              
+              # Hay "vendedor"?
+              if 'from' in mov.keys():
+                vendedor=mov['from']['name']
                 
+                if  date in self.balance[vendedor].keys():
+                  self.balance[vendedor][date]=amount
+                else:
+                  self.balance[vendedor][date+pos+1]=amount
           else:
             
             break
