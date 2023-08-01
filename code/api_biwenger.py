@@ -89,9 +89,9 @@ class biwenger:
                 comprador=mov['to']['name']
                 
                 if  date in self.balance[comprador].keys():
-                  self.balance[comprador][date]=amount
+                  self.balance[comprador][date]=-amount
                 else:
-                  self.balance[comprador][date+pos+1]=amount
+                  self.balance[comprador][date+pos+1]=-amount
 
               
               # Hay "vendedor"?
