@@ -86,7 +86,7 @@ class biwenger:
               # Hay comprador?
               
               if 'to' in mov.keys():
-                comprador=mov['from']['name']
+                comprador=mov['to']['name']
                 
                 if  date in self.balance[comprador].keys():
                   self.balance[comprador][date]=amount
