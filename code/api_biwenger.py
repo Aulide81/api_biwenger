@@ -39,12 +39,11 @@ class biwenger:
     participantes={j['name']:j['id'] for j in participantes}
     return(participantes)
 
-  def create_balance(self):
-    if self.balance is None:
-      participantes=self.users
-      balance={j:{0:50000000} for j in participantes.keys()}
-      balance['__ult.act']=0
-      self.balance=balance
+  def restart_balance(self):
+    participantes=self.users
+    balance={j:{0:50000000} for j in participantes.keys()}
+    balance['__ult.act']=0
+    self.balance=balance
       
   def load_balance(self, path):
     with open(path, "rb") as file:
