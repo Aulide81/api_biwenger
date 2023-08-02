@@ -1,3 +1,4 @@
+
 import requests
 import pickle
 import json
@@ -7,15 +8,49 @@ from pprint import pprint
 
 class biwenger:
   
-  def __init__(self, mail, password, id_league=1648876, id_user=9997844):
+  """
+  Clase que permite obtener informacion de una sesion
+  en la web/app de As Biwenger
+  
+  Para inicializar una instancia precisa:
+    - mail
+    - password
+    
+  Argumentos opcionales:
+    - id_league: el id de la liga a la que queremos acceder
+    - id_user: el id del usuario de la liga que queremos acceder
+    
+  Si desconocemos las ligas que disponemos, será necesario listar
+  las ligas disponibles .leagues() y configurar liga mediante .set_league()
+    
+  """
+  
+  def __init__(self, mail, password, id_league=None, id_user=None):
+    
     self.mail=mail
     self.password=password
-    self.id_league=str(id_league)
-    self.id_user=str(id_user)    
     self.token=self.__get_token__(mail,password)
-    self.users=self.__get_users__()
-    self.balance=None
-
+    self.leagues=self.__get_leagues__()
+    
+    #funcion que valide liga y usuario con la informacion en self.leagues
+    
+    self.id_league = str(id_league)
+    self.id_user = str(id_user)
+    
+    if ((id_league is None) | (id_user is None)):
+      self.users = None
+    else:
+      self.users = self.__get_users__()
+      
+    self.balance = None
+    
+    
+    
+  def __str__(self):
+    if not self.token is None:
+      return("Sesion iniciada correctamente con {mail}".format(mail=self.mail))
+    else:
+      return("No se ha iniciado sesion")
 
   def __get_token__(self, mail, password):
     url = "https://biwenger.as.com/api/v2/auth/login"
@@ -24,12 +59,12 @@ class biwenger:
     token = response.json()['token']
     return(token)
   
-  def __str__(self):
-    if not self.token is None:
-      return("Sesion iniciada correctamente con {mail}".format(mail=self.mail))
-    else:
-      return("No se ha iniciado sesion")
-    
+  def __get_leagues__(self):
+    url="https://biwenger.as.com/api/v2/account"
+    leagues = requests.get(url, headers={'authorization':'Bearer '+ self.token})
+    leagues=leagues.json()['data']['leagues']
+    leagues={ l["name"]:{'id_league':l['id'], 'id_user':l['user']['id'], 'name':l['user']['name']} for l in leagues}
+    return(leagues)
     
   def __get_users__(self):
     url="https://biwenger.as.com/api/v2/league?include=all,-lastAccess&fields=*,standings,tournaments,group,settings(description)"
@@ -38,6 +73,14 @@ class biwenger:
     participantes = diccionario['data']['standings']
     participantes={j['name']:j['id'] for j in participantes}
     return(participantes)
+  
+  def set_league(self, id_league, id_user):
+    
+    #funcion que valide liga y usuario con la informacion en self.leagues
+    
+    self.id_league=str(id_league)
+    self.id_user=str(id_user)
+    self.users = self.__get_users__()
 
   def restart_balance(self):
     participantes=self.users
