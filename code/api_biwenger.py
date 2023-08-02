@@ -41,7 +41,7 @@ class biwenger:
 
   def create_balance(self):
     if self.balance is None:
-      participantes=self.get_users()
+      participantes=self.users
       balance={j:{0:50000000} for j in participantes.keys()}
       balance['__ult.act']=0
       self.balance=balance
