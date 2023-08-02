@@ -1,9 +1,9 @@
-
 import requests
 import pickle
 import json
 import pandas as pd
 from pprint import pprint
+import sys
 
 
 class biwenger:
@@ -20,44 +20,55 @@ class biwenger:
     - id_league: el id de la liga a la que queremos acceder
     - id_user: el id del usuario de la liga que queremos acceder
     
-  Si desconocemos las ligas que disponemos, será necesario listar
-  las ligas disponibles .leagues() y configurar liga mediante .set_league()
+  Si desconocemos las ligas que disponemos, sera necesario listar
+  las ligas disponibles .leagues() y configurar liga mediante .select_league()
     
   """
   
   def __init__(self, mail, password, id_league=None, id_user=None):
-    
+
+    self.token = self.__get_token__(mail, password)
+    self.leagues = self.__get_leagues__()
     self.mail=mail
-    self.password=password
-    self.token=self.__get_token__(mail,password)
-    self.leagues=self.__get_leagues__()
-    
-    #funcion que valide liga y usuario con la informacion en self.leagues
-    
     self.id_league = str(id_league)
     self.id_user = str(id_user)
     
     if ((id_league is None) | (id_user is None)):
-      self.users = None
+      self.members = None
     else:
-      self.users = self.__get_users__()
+      self.__check_id__(int(self.id_league), int(self.id_user))
+      self.members = self.__get_members__()
       
     self.balance = None
     
+  def __check_id__(self, id_league, id_user):
     
+    check=0
     
-  def __str__(self):
-    if not self.token is None:
-      return("Sesion iniciada correctamente con {mail}".format(mail=self.mail))
+    for l in self.leagues.keys():
+      ids_insert=(id_league, id_user)
+      ids_aval=(self.leagues[l]['id_league'], self.leagues[l]['id_user'])
+      condition = (ids_insert==ids_aval)
+      check += condition
+      
+    if check>0:
+      pass
     else:
-      return("No se ha iniciado sesion")
-
+      print("Los ids introducidos no coinciden con ninguno disponible para {mail}".format(mail=self.mail), file=sys.stderr)
+      raise
+    
   def __get_token__(self, mail, password):
+    
     url = "https://biwenger.as.com/api/v2/auth/login"
     login_data = dict(email = mail, password = password)
     response = requests.session().post(url, data = login_data)
-    token = response.json()['token']
-    return(token)
+    
+    try:
+      token = response.json()['token']
+      return(token)
+    except:
+      print(response.text, file=sys.stderr)
+      raise
   
   def __get_leagues__(self):
     url="https://biwenger.as.com/api/v2/account"
@@ -65,8 +76,15 @@ class biwenger:
     leagues=leagues.json()['data']['leagues']
     leagues={ l["name"]:{'id_league':l['id'], 'id_user':l['user']['id'], 'name':l['user']['name']} for l in leagues}
     return(leagues)
+  
+  def select_league(self, id_league, id_user):
+    self.__check_id__(id_league, id_user)
+    self.id_league=str(id_league)
+    self.id_user=str(id_user)
+    self.members = self.__get_members__()
+    self.balance = None
     
-  def __get_users__(self):
+  def __get_members__(self):
     url="https://biwenger.as.com/api/v2/league?include=all,-lastAccess&fields=*,standings,tournaments,group,settings(description)"
     liga = requests.get(url, headers={'authorization':'Bearer '+ self.token, 'x-league': self.id_league, 'x-user': self.id_user})
     diccionario=liga.json()
@@ -74,17 +92,9 @@ class biwenger:
     participantes={j['name']:j['id'] for j in participantes}
     return(participantes)
   
-  def set_league(self, id_league, id_user):
-    
-    #funcion que valide liga y usuario con la informacion en self.leagues
-    
-    self.id_league=str(id_league)
-    self.id_user=str(id_user)
-    self.users = self.__get_users__()
-
-  def restart_balance(self):
+  def restart_balance(self, amount=50000000):
     participantes=self.users
-    balance={j:{0:50000000} for j in participantes.keys()}
+    balance={j:{0:amount} for j in participantes.keys()}
     balance['__ult.act']=0
     self.balance=balance
       
@@ -100,7 +110,6 @@ class biwenger:
   def update_balance(self, limit=500):
     
     if self.balance is None:
-      
       print("No se ha inicializado/cargado el balance")
       return(None)
     
@@ -114,6 +123,8 @@ class biwenger:
       date0=0
       
       # Actualizamos
+      
+      print("Notificaciones cargadas: {x}".format(x=len(muro)))
       
       for div in muro:
         
@@ -161,12 +172,16 @@ class biwenger:
     
   def summary(self):
     
-    for player in self.balance.keys():
-      try:
-        amount=sum([v for v in self.balance[player].values()])
-        print(player,f"{amount:,}"," euros")
-      except:
-        pass
+    try:
+      for player in self.balance.keys():
+        try:
+          amount=sum([v for v in self.balance[player].values()])
+          print(player,f"{amount:,}"," euros")
+        except:
+          pass
+    except:
+      print("Cargue o inicie algun balance adecuado", file=sys.stderr)
+      
   
   def get_players(self):
     
